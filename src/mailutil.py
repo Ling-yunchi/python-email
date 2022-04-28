@@ -34,23 +34,15 @@ class MailUtil:
     def __init__(self, pop3host, smtphost, username, password):
         self.username = username
         self.password = password
+
         self.pop = POP3(pop3host)
         self.pop.set_debuglevel(1)
         self.pop.user(username)
-        try:
-            self.pop.pass_(password)
-            print('POP3 server login success')
-        except Exception as e:
-            print(e)
-            print('POP3 server login failed')
+        self.pop.pass_(password)
+
         self.smtp = SMTP(smtphost)
         self.smtp.set_debuglevel(1)
-        try:
-            self.smtp.login(username, password)
-            print('SMTP server login success')
-        except Exception as e:
-            print(e)
-            print('SMTP server login failed')
+        self.smtp.login(username, password)
 
     def get_mails(self) -> list[Mail]:
         resp, mails, octets = self.pop.list()
@@ -61,7 +53,7 @@ class MailUtil:
             msg = Parser().parsestr(msg_content)
             mail = self._parser_info(msg)
             res.append(mail)
-        res = sorted(res, key=lambda m: m.Date, reverse = True)
+        res = sorted(res, key=lambda m: m.Date, reverse=True)
         return res
 
     @staticmethod
@@ -128,6 +120,56 @@ class MailUtil:
     def __del__(self):
         self.pop.quit()
         self.smtp.quit()
+
+
+def get_pop_host(email):
+    if '@qq.com' in email:
+        return 'pop.qq.com'
+    elif '@163.com' in email:
+        return 'pop.163.com'
+    elif '@126.com' in email:
+        return 'pop.126.com'
+    elif '@sina.com' in email:
+        return 'pop.sina.com'
+    elif '@sina.cn' in email:
+        return 'pop.sina.cn'
+    elif '@gmail.com' in email:
+        return 'pop.gmail.com'
+    elif '@sohu.com' in email:
+        return 'pop.sohu.com'
+    elif '@139.com' in email:
+        return 'pop.139.com'
+    elif '@hotmail.com' in email:
+        return 'pop.live.com'
+    elif '@foxmail.com' in email:
+        return 'pop.foxmail.com'
+    else:
+        return ''
+
+
+def get_smtp_host(email):
+    if '@qq.com' in email:
+        return 'smtp.qq.com'
+    elif '@163.com' in email:
+        return 'smtp.163.com'
+    elif '@126.com' in email:
+        return 'smtp.126.com'
+    elif '@sina.com' in email:
+        return 'smtp.sina.com'
+    elif '@sina.cn' in email:
+        return 'smtp.sina.cn'
+    elif '@gmail.com' in email:
+        return 'smtp.gmail.com'
+    elif '@sohu.com' in email:
+        return 'smtp.sohu.com'
+    elif '@139.com' in email:
+        return 'smtp.139.com'
+    elif '@hotmail.com' in email:
+        return 'smtp.live.com'
+    elif '@foxmail.com' in email:
+        return 'smtp.foxmail.com'
+    else:
+        return ''
 
 
 if __name__ == '__main__':
