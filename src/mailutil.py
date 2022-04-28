@@ -93,7 +93,7 @@ class MailUtil:
         if msg.is_multipart():
             parts = msg.get_payload()
             for n, part in enumerate(parts):
-                Body += MailUtil._parser_info(part, n)
+                Body += MailUtil._parser_info(part, idx + 1)
         else:
             content_type = msg.get_content_type()
             if content_type != 'text/plain':

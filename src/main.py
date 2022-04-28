@@ -11,11 +11,12 @@ info_bg_color = "#17A2B8"
 
 
 class App:
-    now_frame = None
+    now_frame: None | tk.Frame = None
+    login = False
+    mail_util: None | MailUtil = None
 
     def __init__(self, root):
         # set title
-        self.mail_util = None
         root.title('Email Client')
 
         # center the window
@@ -39,10 +40,12 @@ class App:
         self.login_button = ttk.Button(left_bar, text='Login', command=self.show_login_frame)
         self.login_button.pack(side=tk.TOP, fill=tk.X, pady=10)
 
-        self.get_email_button = ttk.Button(left_bar, text='Get Email', width=10, command=self.show_get_email_frame)
+        self.get_email_button = ttk.Button(left_bar, text='Get Email', width=10, command=self.show_get_email_frame,
+                                           state=tk.DISABLED)
         self.get_email_button.pack(side=tk.TOP, fill=tk.X, pady=10)
 
-        self.send_email_button = ttk.Button(left_bar, text='Send Email', width=10, command=self.show_send_email_frame)
+        self.send_email_button = ttk.Button(left_bar, text='Send Email', width=10, command=self.show_send_email_frame,
+                                            state=tk.DISABLED)
         self.send_email_button.pack(side=tk.TOP, fill=tk.X, pady=10)
 
         # create a right main widget
@@ -78,13 +81,27 @@ class App:
         self.password_entry = ttk.Entry(login_form, width=30, show='*')
         self.password_entry.pack(side=tk.TOP, fill=tk.X, pady=10)
 
+        # set debug value
+        self.email_entry.insert(0, '18873564337@163.com')
+        self.password_entry.insert(0, 'BJJTOUKRFYPZRYIS')
+
         self.login_button = ttk.Button(login_form, text='Login', command=self.login)
         self.login_button.pack(side=tk.TOP, fill=tk.X, pady=10)
 
         # create a get email frame
         self.get_email_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info')
+
         label = ttk.Label(self.get_email_frame, text='Get Email', font=('Arial', 15))
         label.pack(fill=tk.BOTH)
+
+        # mail list
+        self.mail_list = tk.Listbox(self.get_email_frame, width=30, height=10)
+        self.mail_list.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # create a scrollbar
+        self.scrollbar = ttk.Scrollbar(self.mail_list)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.mail_list.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.mail_list.yview)
 
         # create a send email frame
         self.send_email_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info')
@@ -97,9 +114,21 @@ class App:
         self.now_frame = self.login_frame
 
     def show_get_email_frame(self):
+        if self.mail_util is None:
+            messagebox.showinfo('Error', 'Please login first')
+            return
+
         self.now_frame.pack_forget()
         self.get_email_frame.pack(fill=tk.BOTH, expand=True)
         self.now_frame = self.get_email_frame
+
+        self.mail_list.delete(0, tk.END)
+        for mail in self.mail_util.get_mails():
+            mail_text = ttk.Text(self.mail_list, width=40, height=10, font=('Arial', 10), wrap=tk.WORD, )
+            mail_text.insert(tk.END, mail.__str__())
+            mail_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+            self.mail_list.insert(tk.END, mail_text)
 
     def show_send_email_frame(self):
         self.now_frame.pack_forget()
@@ -123,6 +152,8 @@ class App:
             messagebox.showinfo('Error', str(e))
             return
         messagebox.showinfo('Success', 'Login Success')
+        self.get_email_button.config(state=tk.NORMAL)
+        self.send_email_button.config(state=tk.NORMAL)
         self.show_get_email_frame()
 
 
