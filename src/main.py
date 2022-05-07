@@ -6,7 +6,7 @@ from tkinter import messagebox
 
 import ttkbootstrap as ttk
 
-from src.mailutil import MailUtil, get_pop_host, get_smtp_host, Mail
+from mailutil import MailUtil, get_pop_host, get_smtp_host, Mail
 
 success_bg_color = "#02B875"
 warnings_bg_color = "#F0AD4E"
@@ -267,7 +267,12 @@ class App:
 
         self.sent_emails_list.delete(0, tk.END)
         for i, mail in enumerate(self.sent_emails):
-            self.sent_emails_list.insert(i, mail.Subject)
+            mail_str = ''
+            if len(mail.Subject) < 40:
+                mail_str = f"{mail.Subject} | {mail.Date}"
+            else:
+                mail_str = f"{mail.Subject[:40]}... | {mail.Date}"
+            self.sent_emails_list.insert(i, mail_str)
 
     def user_login(self):
         email = self.email_entry.get()
