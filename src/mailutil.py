@@ -89,11 +89,10 @@ class MailUtil:
                         name = MailUtil._decode_str(hdr)
                         value = f'{name} <{addr}>'
                 res.__dict__[header] = value
-        Body = ''
-        if msg.is_multipart():
+            res.Body = MailUtil._parser_info(msg, idx + 1)
+        elif msg.is_multipart():
             parts = msg.get_payload()
-            for n, part in enumerate(parts):
-                Body += MailUtil._parser_info(part, idx + 1)
+            return ''.join(MailUtil._parser_info(part, idx + 1) for part in parts)
         else:
             content_type = msg.get_content_type()
             if content_type != 'text/plain':
@@ -102,7 +101,6 @@ class MailUtil:
             if charset := MailUtil._guess_charset(msg):
                 content = content.decode(charset)
             return content
-        res.Body = Body
         return res
 
     def send_mail(self, to_addr, subject, content):

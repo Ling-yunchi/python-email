@@ -1,3 +1,5 @@
+import datetime
+import pickle
 import re
 import tkinter as tk
 from tkinter import messagebox
@@ -16,10 +18,12 @@ class App:
     now_frame: None | tk.Frame = None
     login = False
     mail_util: None | MailUtil = None
-    mails: None | list[Mail] = None
+    receive_emails: None | list[Mail] = None
+    sent_emails: None | list[Mail] = None
 
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         # set title
+        self.root = root
         root.title('Email Client')
 
         # center the window
@@ -30,13 +34,15 @@ class App:
         x = (screen_width / 2) - (width / 2)
         y = (screen_height / 2) - (height / 2)
         root.geometry('%dx%d+%d+%d' % (width, height, x, y))
-        # root.resizable(False, False)
+        root.resizable(False, False)
+
+        root.protocol("WM_DELETE_WINDOW", self.save_file_and_destroy)
 
         # create a left bar
         left_bar = ttk.Frame(root, width=200, height=400, bootstyle='success', padding=10)
         left_bar.pack(side=tk.LEFT, fill=tk.Y)
 
-        label = ttk.Label(left_bar, text='163 Mail Client', font=('Arial', 15), background=success_bg_color,
+        label = ttk.Label(left_bar, text='Mail Client', font=('Arial', 15), background=success_bg_color,
                           foreground='white')
         label.pack(side=tk.TOP, fill=tk.X, pady=10)
 
@@ -51,19 +57,30 @@ class App:
                                             state=tk.DISABLED)
         self.send_email_button.pack(side=tk.TOP, fill=tk.X, pady=10)
 
+        self.sent_emails_button = ttk.Button(left_bar, text='Sent Emails', width=10,
+                                             command=self.show_sent_emails_frame,
+                                             state=tk.DISABLED)
+        self.sent_emails_button.pack(side=tk.TOP, fill=tk.X, pady=10)
+
         # create a right main widget
         self.right_main = ttk.Frame(root, width=400, height=400, bootstyle='warning', padding=10)
         self.right_main.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         # create a welcome frame
-        self.welcome_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info', padding=50)
+        self.welcome_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info', padding=10)
         self.now_frame = self.welcome_frame
         self.now_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # center the label
-        label = ttk.Label(self.welcome_frame, text='Welcome to 163 Mail Client', font=('Arial', 15),
-                          background=info_bg_color, foreground='white')
+        label = ttk.Label(self.welcome_frame, text='Welcome to Mail Client', font=('Arial', 25),
+                          background=info_bg_color, foreground='white', anchor=tk.CENTER)
         label.pack(side=tk.TOP, fill=tk.X, pady=10)
+        explain_label = ttk.Label(self.welcome_frame, text='enjoy yourself!', font=label_font,
+                                  background=info_bg_color, foreground='white', anchor=tk.CENTER)
+        explain_label.pack(side=tk.TOP, fill=tk.X, pady=10)
+        # copyright right bottom
+        copy_right = ttk.Label(self.welcome_frame, text='Copyright © 2022-2023', font=('Arial', 10),
+                               background=info_bg_color, foreground='white')
+        copy_right.pack(side=tk.BOTTOM, anchor=tk.SE)
 
         # create a login frame
         self.login_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info', padding=10)
@@ -83,10 +100,6 @@ class App:
         password_label.pack(side=tk.TOP, fill=tk.X, pady=10)
         self.password_entry = ttk.Entry(login_form, width=30, show='*')
         self.password_entry.pack(side=tk.TOP, fill=tk.X, pady=10)
-
-        # set debug value
-        self.email_entry.insert(0, '18873564337@163.com')
-        self.password_entry.insert(0, 'BJJTOUKRFYPZRYIS')
 
         self.login_button = ttk.Button(login_form, text='Login', command=self.user_login)
         self.login_button.pack(side=tk.TOP, fill=tk.X, pady=10)
@@ -131,10 +144,29 @@ class App:
 
         content_label = ttk.Label(self.send_email_frame, text='Content:', font=label_font)
         content_label.pack(side=tk.TOP, fill=tk.X)
-        self.content_text = tk.Text(self.send_email_frame, width=30, height=10)
+        self.content_text = tk.Text(self.send_email_frame, width=30, height=8)
         self.content_text.pack(side=tk.TOP, fill=tk.X)
 
         self.send_button = ttk.Button(self.send_email_frame, text='Send', command=self.send_email)
+        self.send_button.pack(side=tk.TOP, fill=tk.X, anchor=tk.CENTER)
+
+        # create a sent emails frame
+        self.sent_emails_frame = ttk.Frame(self.right_main, width=400, height=100, bootstyle='info')
+        label = ttk.Label(self.sent_emails_frame, text='Sent Emails', font=('Arial', 15))
+        label.pack(fill=tk.BOTH)
+
+        # sent emails list
+        self.sent_emails_list = tk.Listbox(self.sent_emails_frame, width=30, height=10)
+        self.sent_emails_list.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # create a scrollbar
+        self.sent_emails_scrollbar = ttk.Scrollbar(self.sent_emails_list)
+        self.sent_emails_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.sent_emails_list.config(yscrollcommand=self.sent_emails_scrollbar.set)
+        self.sent_emails_scrollbar.config(command=self.sent_emails_list.yview)
+        # when select a mail, show the mail content
+        self.sent_emails_list.bind('<<ListboxSelect>>', self.show_email_content)
+
+        self.get_last_login()
 
     def show_login_frame(self):
         self.now_frame.pack_forget()
@@ -151,8 +183,8 @@ class App:
         self.now_frame = self.get_email_frame
 
         self.mail_list.delete(0, tk.END)
-        self.mails = self.mail_util.get_mails()
-        for i, mail in enumerate(self.mails):
+        self.receive_emails = self.mail_util.get_mails()
+        for i, mail in enumerate(self.receive_emails):
             mail_str = ''
             if len(mail.Subject) < 40:
                 mail_str = f"{mail.Subject} | {mail.Date}"
@@ -164,7 +196,16 @@ class App:
         if len(event.widget.curselection()) == 0:
             return
         idx = event.widget.curselection()[0]
-        mail = self.mails[idx]
+        # find who send the event
+        mail = None
+        if event.widget == self.mail_list:
+            mail = self.receive_emails[idx]
+        elif event.widget == self.sent_emails_list:
+            mail = self.sent_emails[idx]
+        else:
+            messagebox.showinfo('Error', 'Unknown Widget')
+            return
+        # mail = self.receive_emails[idx]
         # toplevel show the mail content
         top = tk.Toplevel()
         top.title(mail.Subject)
@@ -219,6 +260,15 @@ class App:
         self.from_email_entry.insert(0, self.mail_util.username)
         self.from_email_entry.config(state='readonly')
 
+    def show_sent_emails_frame(self):
+        self.now_frame.pack_forget()
+        self.sent_emails_frame.pack(fill=tk.BOTH, expand=True)
+        self.now_frame = self.sent_emails_frame
+
+        self.sent_emails_list.delete(0, tk.END)
+        for i, mail in enumerate(self.sent_emails):
+            self.sent_emails_list.insert(i, mail.Subject)
+
     def user_login(self):
         email = self.email_entry.get()
         password = self.password_entry.get()
@@ -236,8 +286,17 @@ class App:
             messagebox.showinfo('Error', str(e))
             return
         messagebox.showinfo('Success', 'Login Success')
+        file_name = email.replace('@', '_').replace('.', '_')
+        try:
+            with open(f'../data/{file_name}.dat', 'rb') as f:
+                self.sent_emails = pickle.load(f)
+        except FileNotFoundError:
+            self.sent_emails = []
+
+        self.login = True
         self.get_email_button.config(state=tk.NORMAL)
         self.send_email_button.config(state=tk.NORMAL)
+        self.sent_emails_button.config(state=tk.NORMAL)
         self.show_get_email_frame()
 
     def send_email(self):
@@ -262,12 +321,42 @@ class App:
         except Exception as e:
             messagebox.showinfo('Error', str(e))
             return
+        sent_mail = Mail(self.mail_util.username, to, subject, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                         content)
+        self.sent_emails.insert(0, sent_mail)
         messagebox.showinfo('Success', 'Send Success')
         # clear the entry
         self.to_email_entry.delete(0, tk.END)
         self.subject_entry.delete(0, tk.END)
         self.content_text.delete('1.0', tk.END)
         self.show_get_email_frame()
+
+    def get_last_login(self):
+        try:
+            with open('../data/last_login.dat', 'r') as f:
+                lines = f.readlines()
+                if len(lines) == 0:
+                    return
+                last_login = lines[0].strip()
+                self.email_entry.insert(0, last_login)
+                last_login_password = lines[1].strip()
+                self.password_entry.insert(0, last_login_password)
+        except FileNotFoundError:
+            pass
+
+    def save_file_and_destroy(self):
+        if self.login:
+            # save last login email
+            with open('../data/last_login.dat', 'w') as f:
+                f.write(self.mail_util.username)
+                f.write('\n')
+                f.write(self.mail_util.password)
+            # save sent emails
+            file_name = self.mail_util.username.replace('@', '_').replace('.', '_')
+            with open(f'../data/{file_name}.dat', 'wb') as f:
+                pickle.dump(self.sent_emails, f)
+
+        self.root.destroy()
 
 
 if __name__ == '__main__':
