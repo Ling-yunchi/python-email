@@ -8,12 +8,6 @@ from smtplib import SMTP
 
 
 class Mail:
-    From: str = ''
-    To: str = ''
-    Subject: str = ''
-    Date: str = ''
-    Body: str = ''
-
     def __init__(self, From, To, Subject, Date, Body):
         self.From = From
         self.To = To
