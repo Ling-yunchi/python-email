@@ -45,7 +45,11 @@ class MailUtil:
             resp, lines, octets = self.pop.retr(i + 1)
             msg_content = b'\r\n'.join(lines).decode('utf-8')
             msg = Parser().parsestr(msg_content)
-            mail = self._parser_info(msg)
+            try:
+                mail = self._parser_info(msg)
+            except Exception as e:
+                print(e)
+                continue
             res.append(mail)
         res = sorted(res, key=lambda m: m.Date, reverse=True)
         return res

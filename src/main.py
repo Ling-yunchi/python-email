@@ -1,4 +1,5 @@
 import datetime
+import os
 import pickle
 import re
 import tkinter as tk
@@ -205,8 +206,7 @@ class App:
         else:
             messagebox.showinfo('Error', 'Unknown Widget')
             return
-        # mail = self.receive_emails[idx]
-        # toplevel show the mail content
+
         top = tk.Toplevel()
         top.title(mail.Subject)
         top.geometry('700x500')
@@ -337,6 +337,9 @@ class App:
         self.show_get_email_frame()
 
     def get_last_login(self):
+        # create a directory
+        if not os.path.exists('../data'):
+            os.mkdir('../data')
         try:
             with open('../data/last_login.dat', 'r') as f:
                 lines = f.readlines()
