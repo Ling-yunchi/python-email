@@ -65,7 +65,7 @@ class MailUtil:
             pos = content_type.find('charset=')
             if pos >= 0:
                 charset = content_type[pos + 8:].strip()
-        return charset
+        return charset or msg.get('X-CM-HeaderCharset', '').lower() or 'gbk'
 
     @staticmethod
     def _parser_info(msg, idx=0):
