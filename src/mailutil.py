@@ -166,18 +166,3 @@ def get_smtp_host(email):
         return 'smtp.foxmail.com'
     else:
         return ''
-
-
-if __name__ == '__main__':
-    mailUtil = MailUtil(
-        pop3host="pop.163.com",
-        smtphost="smtp.163.com",
-        username="18873564337@163.com",
-        password="BJJTOUKRFYPZRYIS"
-    )
-
-    emails = mailUtil.get_mails()
-    for email in emails:
-        print(email)
-
-    mailUtil.send_mail('2046883927@qq.com', 'test email', 'qwqqq')
